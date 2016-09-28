@@ -14,9 +14,10 @@ class AntRecipe < BaseRecipe
 
   def install
     FileUtils.mkdir_p(path)
+    platform = ppc64le? ? "ppc64el" : "amd64"
     execute('install', [
               'env',
-              'JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-amd64/',
+              "JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-#{platform}/",
               "ANT_HOME=#{path}",
               'sh', 'build.sh', 'install-lite'
             ])

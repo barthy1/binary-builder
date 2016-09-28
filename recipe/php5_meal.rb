@@ -3,7 +3,7 @@ require_relative 'php_common'
 
 class Php5Recipe < BaseRecipe
   def configure_options
-    [
+    options = [
       '--disable-static',
       '--enable-shared',
       '--enable-ftp=shared',
@@ -53,6 +53,7 @@ class Php5Recipe < BaseRecipe
       '--enable-pcntl=shared',
       '--with-readline=shared'
     ]
+    ppc64le? ? options.push('--build=powerpc64le-linux-gnu') : options
   end
 
   def url
@@ -87,7 +88,8 @@ class Php5Recipe < BaseRecipe
   end
 
   def archive_filename
-    "php-#{version}-linux-x64-#{Time.now.utc.to_i}.tgz"
+    platform = ppc64le? ? "ppc64le" : "x64"
+    "php-#{version}-linux-#{platform}-#{Time.now.utc.to_i}.tgz"
   end
 
   def setup_tar
@@ -99,11 +101,11 @@ class Php5Recipe < BaseRecipe
       cp -a /usr/lib/libmcrypt.so* #{path}/lib
       cp -a /usr/lib/libaspell.so* #{path}/lib
       cp -a /usr/lib/libpspell.so* #{path}/lib
-      cp -a /usr/lib/x86_64-linux-gnu/libgearman.so* #{path}/lib
-      cp -a /usr/lib/x86_64-linux-gnu/libcassandra.so* #{path}/lib
-      cp -a /usr/lib/x86_64-linux-gnu/libuv.so* #{path}/lib
-      cp -a /usr/local/lib/x86_64-linux-gnu/librabbitmq.so* #{path}/lib/
-      cp -a /usr/lib/x86_64-linux-gnu/libsybdb.so* #{path}/lib/
+      cp -a /usr/lib/#{file_path}/libgearman.so* #{path}/lib
+      cp -a /usr/lib/#{file_path}/libcassandra.so* #{path}/lib
+      cp -a /usr/lib/#{file_path}/libuv.so* #{path}/lib
+      cp -a /usr/local/lib/#{file_path}/librabbitmq.so* #{path}/lib/
+      cp -a /usr/lib/#{file_path}/libsybdb.so* #{path}/lib/
 
       # Remove unused files
       rm "#{path}/etc/php-fpm.conf.default"
@@ -124,6 +126,11 @@ class Php5Meal
     @version = version
     @options = options
   end
+
+    def file_path
+      arch = RbConfig::CONFIG['host_cpu']
+      arch == 'powerpc64le' ? "powerpc64le-linux-gnu" : "x86_64-linux-gnu"
+    end
 
   def cook
     system <<-eof
@@ -152,15 +159,17 @@ class Php5Meal
         libsybdb5 \
         libxml2-dev \
         libzip-dev \
-        libzookeeper-mt-dev \
+        libdb-dev \
+
         snmp-mibs-downloader
-      sudo ln -fs /usr/include/x86_64-linux-gnu/gmp.h /usr/include/gmp.h
-      sudo ln -fs /usr/lib/x86_64-linux-gnu/libldap.so /usr/lib/libldap.so
-      sudo ln -fs /usr/lib/x86_64-linux-gnu/libldap_r.so /usr/lib/libldap_r.so
-      sudo ln -fs /usr/lib/x86_64-linux-gnu/libsybdb.so /usr/lib/libsybdb.so
+
+      sudo ln -fs /usr/include/#{file_path}/gmp.h /usr/include/gmp.h
+      sudo ln -fs /usr/lib/#{file_path}/libldap.so /usr/lib/libldap.so
+      sudo ln -fs /usr/lib/#{file_path}/libldap_r.so /usr/lib/libldap_r.so
+      sudo ln -fs /usr/lib/#{file_path}/libsybdb.so /usr/lib/libsybdb.so
     eof
 
-    install_cassandra_dependencies
+    install_cassandra_dependencies || true
 
     ioncube_recipe.cook
 
@@ -306,7 +315,7 @@ class Php5Meal
   end
 
   def ioncube_recipe
-    @ioncube ||= IonCubeRecipe.new('ioncube', '5.1.2', md5: '141cc491d5b8e42764147bc7a5e649b5')
+    @ioncube ||= IonCubeRecipe.new('ioncube', '5.1.2', md5: '7d2b42033a0570e99080beb6a7db1478')
   end
 
   def phalcon_recipe

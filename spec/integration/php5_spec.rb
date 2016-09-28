@@ -5,18 +5,19 @@ require 'fileutils'
 describe 'building a binary', :integration do
   context 'when php5 is specified' do
     before(:all) do
-      run_binary_builder('php', '5.6.14', '--md5=ae625e0cfcfdacea3e7a70a075e47155')
-      @binary_tarball_location = Dir.glob(File.join(Dir.pwd, 'php-5.6.14-linux-x64-*.tgz')).first
+      run_binary_builder('php', '5.6.26', '--md5=e019f790fd5bd431d2d4ba7c756f6f4c9bad9bc9')
+      platform = (ENV['BINARY_BUILDER_PLATFORM'] == 'x86_64') ? "x64" : ENV['BINARY_BUILDER_PLATFORM']
+      @binary_tarball_location = Dir.glob(File.join(Dir.pwd, "php-5.6.26-linux-#{platform}-*.tgz")).first
     end
 
     after(:all) do
-      FileUtils.rm(@binary_tarball_location)
+     # FileUtils.rm(@binary_tarball_location)
     end
 
     it 'builds the specified binary, tars it, and places it in your current working directory' do
       expect(File).to exist(@binary_tarball_location)
 
-      php_version_cmd = %{./spec/assets/php-exerciser.sh 5.6.14 #{File.basename(@binary_tarball_location)} ./php/bin/php -r 'echo phpversion();'}
+      php_version_cmd = %{./spec/assets/php-exerciser.sh 5.6.26 #{File.basename(@binary_tarball_location)} ./php/bin/php -r 'echo phpversion();'}
 
       output, status = run(php_version_cmd)
 

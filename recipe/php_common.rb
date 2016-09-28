@@ -29,7 +29,8 @@ class PeclRecipe < BaseRecipe
 
   def configure_options
     [
-      "--with-php-config=#{@php_path}/bin/php-config"
+      "--with-php-config=#{@php_path}/bin/php-config",
+      "--build=powerpc64le-linux-gnu"
     ]
   end
 
@@ -277,11 +278,16 @@ class SnmpRecipe
     @php_path = php_path
   end
 
+  def file_path
+    arch = RbConfig::CONFIG['host_cpu']
+    arch == 'powerpc64le' ? "powerpc64le-linux-gnu" : "x86_64-linux-gnu"
+  end
+
   def cook
     system <<-eof
       cd #{@php_path}
       mkdir -p mibs
-      cp "/usr/lib/x86_64-linux-gnu/libnetsnmp.so.30" lib/
+      cp "/usr/lib/#{file_path}/libnetsnmp.so.30" lib/
       # copy mibs that are packaged freely
       cp /usr/share/snmp/mibs/* mibs
       # copy mibs downloader & smistrip, will download un-free mibs
@@ -324,6 +330,50 @@ end
 
 def install_cassandra_dependencies
   cassandra_version = "2.4.3"
+ # http://ports.ubuntu.com/ubuntu-ports/pool/universe/libu/libuv1/libuv1-dbg_1.8.0-1_ppc64el.deb
+  arch = RbConfig::CONFIG['host_cpu']
+  if arch == 'powerpc64le'
+    system <<-eof
+sudo apt-get update
+sudo apt-get -y upgrade
+sudo apt-get -y install \
+  automake \
+  g++ \
+  make \
+  cmake \
+  libssl-dev \
+  libtool \
+  python-dev \
+  clang-3.6 \
+  libboost-all-dev
+mkdir /tmp/cassandra
+cd /tmp/cassandra
+wget https://s3.amazonaws.com/buildpacks-store/libuv_1.8.0-1_ppc64el.deb
+wget https://s3.amazonaws.com/buildpacks-store/libuv-dev_1.8.0-1_ppc64el.deb
+dpkg -i libuv_1.8.0-1_ppc64el.deb
+dpkg -i libuv-dev_1.8.0-1_ppc64el.deb
+git clone --recursive https://github.com/boostorg/boost
+cd boost
+# git submodule update --init libs/chrono
+# git submodule update --init libs/date_time
+# git submodule update --init libs/filesystem
+# git submodule update --init libs/log
+# git submodule update --init libs/log_setup
+# git submodule update --init libs/system
+# git submodule update --init libs/regex
+# git submodule update --init libs/thread
+# git submodule update --init libs/unit_test_framework
+./bootstrap.sh --prefix=/usr --libdir=/usr/local/lib --includedir=/usr/local/include
+./b2 install
+cd ..
+git clone --recursive https://github.com/datastax/cpp-driver
+mkdir cpp-driver/build
+cd cpp-driver/build
+cmake -DBOOST_ROOT=/tmp/cassandra/boost/ -DCMAKE_INSTALL_PREFIX:PATH=/usr -DBoost_DEBUG=ON ..
+make
+make install
+      eof
+     else
   system <<-eof
     wget http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies/libuv/v1.8.0/libuv_1.8.0-1_amd64.deb
     wget http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies/libuv/v1.8.0/libuv-dev_1.8.0-1_amd64.deb
@@ -335,4 +385,5 @@ def install_cassandra_dependencies
     dpkg -i cassandra-cpp-driver_#{cassandra_version}-1_amd64.deb
     dpkg -i cassandra-cpp-driver-dev_#{cassandra_version}-1_amd64.deb
   eof
+  end
 end

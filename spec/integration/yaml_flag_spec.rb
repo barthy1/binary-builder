@@ -16,7 +16,8 @@ zAZ014ADQ5yfH+Ma40K997AxZeCVGU+A5IEHGoZ2i8pyqx0Jhh6cbpC18yHu5ciN
 aySUQcOvO67Z14d9E9ziX/E24KWl6xRymmy9VhzawgSmf//3yZVaD6C/8om3qMw=
 =zjw3
 -----END PGP SIGNATURE-----"')
-      @binary_tarball_location = File.join(Dir.pwd, 'nginx-1.9.4-linux-x64.tgz')
+      @platform = (ENV['BINARY_BUILDER_PLATFORM'] == 'x86_64') ? "x64" : ENV['BINARY_BUILDER_PLATFORM']
+      @binary_tarball_location = File.join(Dir.pwd, "nginx-1.9.4-linux-#{@platform}.tgz")
     end
 
     after(:all) do
@@ -34,7 +35,7 @@ aySUQcOvO67Z14d9E9ziX/E24KWl6xRymmy9VhzawgSmf//3yZVaD6C/8om3qMw=
     end
 
     it 'includes the yaml representation of the source inside the resulting tarball' do
-      yaml_source = `tar xzf nginx-1.9.4-linux-x64.tgz sources.yml -O`
+      yaml_source = `tar xzf nginx-1.9.4-linux-#{@platform}.tgz sources.yml -O`
       expect(YAML.load(yaml_source)).to eq([
                                              {
                                                'url'    => 'http://nginx.org/download/nginx-1.9.4.tar.gz',
@@ -47,7 +48,8 @@ aySUQcOvO67Z14d9E9ziX/E24KWl6xRymmy9VhzawgSmf//3yZVaD6C/8om3qMw=
   context 'when a meal is specified' do
     before(:all) do
       @output, = run_binary_builder('httpd', '2.4.12', '--md5=b8dc8367a57a8d548a9b4ce16d264a13')
-      @binary_tarball_location = Dir.glob(File.join(Dir.pwd, 'httpd-2.4.12-linux-x64*.tgz')).first
+      @platform = (ENV['BINARY_BUILDER_PLATFORM'] == 'x86_64') ? "x64" : ENV['BINARY_BUILDER_PLATFORM']
+      @binary_tarball_location = Dir.glob(File.join(Dir.pwd, "httpd-2.4.12-linux-#{@platform}*.tgz")).first
     end
 
     it 'prints a yaml representation of the source used to build the binary to stdout' do
@@ -73,7 +75,7 @@ aySUQcOvO67Z14d9E9ziX/E24KWl6xRymmy9VhzawgSmf//3yZVaD6C/8om3qMw=
     end
 
     it 'includes the yaml representation of the source inside the resulting tarball' do
-      yaml_source = `tar xzf httpd-2.4.12-linux-x64.tgz sources.yml -O`
+      yaml_source = `tar xzf httpd-2.4.12-linux-#{@platform}.tgz sources.yml -O`
       expect(YAML.load(yaml_source)).to match_array([
                                                       {
                                                         'url'    => 'http://apache.mirrors.tds.net/apr/apr-1.5.2.tar.gz',

@@ -13,6 +13,8 @@ class BaseRecipe < MiniPortile
       instance_variable_set("@#{key}", value)
     end
 
+    @arch = RbConfig::CONFIG['host_cpu']
+
     @files = [{
       url: url
     }.merge(DetermineChecksum.new(options).to_h)]
@@ -27,7 +29,8 @@ class BaseRecipe < MiniPortile
   end
 
   def archive_filename
-    "#{name}-#{version}-linux-x64.tgz"
+    platform = ppc64le? ? "ppc64le" : "x64"
+    "#{name}-#{version}-linux-#{platform}.tgz"
   end
 
   def archive_files
@@ -36,6 +39,14 @@ class BaseRecipe < MiniPortile
 
   def archive_path_name
     ''
+  end
+
+  def ppc64le?
+    @arch == 'powerpc64le'
+  end
+
+  def x86_64?
+    @arch == 'x86_64'
   end
 
   private

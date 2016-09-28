@@ -6,7 +6,8 @@ describe 'building a binary', :integration do
   context 'when ruby is specified' do
     before(:all) do
       run_binary_builder('ruby', '2.2.3', '--sha256=df795f2f99860745a416092a4004b016ccf77e8b82dec956b120f18bdc71edce')
-      @binary_tarball_location = File.join(Dir.pwd, 'ruby-2.2.3-linux-x64.tgz')
+      @platform = (ENV['BINARY_BUILDER_PLATFORM'] == 'x86_64') ? "x64" : ENV['BINARY_BUILDER_PLATFORM']
+      @binary_tarball_location = File.join(Dir.pwd, "ruby-2.2.3-linux-#{@platform}.tgz")
     end
 
     after(:all) do
@@ -16,7 +17,7 @@ describe 'building a binary', :integration do
     it 'builds the specified binary, tars it, and places it in your current working directory' do
       expect(File).to exist(@binary_tarball_location)
 
-      ruby_version_cmd = "./spec/assets/binary-exerciser.sh ruby-2.2.3-linux-x64.tgz ./bin/ruby -e 'puts RUBY_VERSION'"
+      ruby_version_cmd = "./spec/assets/binary-exerciser.sh ruby-2.2.3-linux-#{@platform}.tgz ./bin/ruby -e 'puts RUBY_VERSION'"
       output, status = run(ruby_version_cmd)
 
       expect(status).to be_success

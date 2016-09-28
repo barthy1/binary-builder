@@ -3,7 +3,7 @@ require_relative 'php_common'
 
 class Php7Recipe < BaseRecipe
   def configure_options
-    [
+    options = [
       '--disable-static',
       '--enable-shared',
       '--enable-ftp=shared',
@@ -49,6 +49,7 @@ class Php7Recipe < BaseRecipe
       '--enable-pcntl=shared',
       '--with-readline'
     ]
+    ppc64le? ? options.push('--build=powerpc64le-linux-gnu') : options
   end
 
   def url
@@ -57,6 +58,11 @@ class Php7Recipe < BaseRecipe
 
   def archive_files
     ["#{port_path}/*"]
+  end
+
+  def file_path
+    arch = RbConfig::CONFIG['host_cpu']
+    arch == 'powerpc64le' ? "powerpc64le-linux-gnu" : "x86_64-linux-gnu"
   end
 
   def archive_path_name
@@ -83,19 +89,21 @@ class Php7Recipe < BaseRecipe
   end
 
   def archive_filename
-    "php7-#{version}-linux-x64-#{Time.now.utc.to_i}.tgz"
+    platform = ppc64le? ? "ppc64le" : "x64"
+    "php7-#{version}-linux-#{platform}-#{Time.now.utc.to_i}.tgz"
   end
 
   def setup_tar
     system <<-eof
-      cp -a /usr/local/lib/x86_64-linux-gnu/librabbitmq.so* #{path}/lib/
+      cp -a /usr/local/lib/#{file_path}/librabbitmq.so* #{path}/lib/
       cp -a /usr/lib/libc-client.so* #{path}/lib/
       cp -a /usr/lib/libmcrypt.so* #{path}/lib
       cp -a /usr/lib/libaspell.so* #{path}/lib
       cp -a /usr/lib/libpspell.so* #{path}/lib
-      cp -a /usr/lib/x86_64-linux-gnu/libmemcached.so* #{path}/lib
-      cp -a /usr/lib/x86_64-linux-gnu/libcassandra.so* #{path}/lib
-      cp -a /usr/lib/x86_64-linux-gnu/libuv.so* #{path}/lib
+      cp -a /usr/lib/#{file_path}/libmemcached.so* #{path}/lib
+      cp -a /usr/lib/#{file_path}/libcassandra.so* #{path}/lib
+      cp -a /usr/lib/#{file_path}/libuv.so* #{path}/lib
+      cp -a /usr/lib/libuv.so* #{path}/lib
 
       # Remove unused files
       rm "#{path}/etc/php-fpm.conf.default"
@@ -115,6 +123,11 @@ class Php7Meal
     @name    = name
     @version = version
     @options = options
+  end
+
+  def file_path
+    arch = RbConfig::CONFIG['host_cpu']
+    arch == 'powerpc64le' ? "powerpc64le-linux-gnu" : "x86_64-linux-gnu"
   end
 
   def cook
@@ -141,14 +154,14 @@ class Php7Meal
         libssl-dev \
         libxml2-dev \
         libzip-dev \
-        libzookeeper-mt-dev \
+        libdb-dev \
         snmp-mibs-downloader
-      sudo ln -fs /usr/include/x86_64-linux-gnu/gmp.h /usr/include/gmp.h
-      sudo ln -fs /usr/lib/x86_64-linux-gnu/libldap.so /usr/lib/libldap.so
-      sudo ln -fs /usr/lib/x86_64-linux-gnu/libldap_r.so /usr/lib/libldap_r.so
+      sudo ln -fs /usr/include/#{file_path}/gmp.h /usr/include/gmp.h
+      sudo ln -fs /usr/lib/#{file_path}/libldap.so /usr/lib/libldap.so
+      sudo ln -fs /usr/lib/#{file_path}/libldap_r.so /usr/lib/libldap_r.so
     eof
 
-    install_cassandra_dependencies
+    install_cassandra_dependencies || true
 
     php_recipe.cook
     php_recipe.activate
