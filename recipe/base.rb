@@ -6,14 +6,15 @@ require_relative 'determine_checksum'
 require_relative '../lib/yaml_presenter'
 
 class BaseRecipe < MiniPortile
-  def initialize(name, version, options = {})
+  def initialize(name, version, platform = 'x86_64', os = 'linux-gnu', options = {})
     super name, version
-
     options.each do |key, value|
       instance_variable_set("@#{key}", value)
     end
-
-    @arch = RbConfig::CONFIG['host_cpu']
+    puts "platform = #{platform}"
+    @platform = platform
+    puts "os = #{os}"
+    @os = os
 
     @files = [{
       url: url
@@ -29,8 +30,8 @@ class BaseRecipe < MiniPortile
   end
 
   def archive_filename
-    platform = ppc64le? ? "ppc64le" : "x64"
-    "#{name}-#{version}-linux-#{platform}.tgz"
+    puts "archive_filename platform_short= #{platform_short}"
+    "#{name}-#{version}-linux-#{platform_short}.tgz"
   end
 
   def archive_files
@@ -42,11 +43,28 @@ class BaseRecipe < MiniPortile
   end
 
   def ppc64le?
-    @arch == 'powerpc64le'
+    @platform == 'ppc64le'
   end
 
   def x86_64?
-    @arch == 'x86_64'
+    @platform == 'x86_64'
+  end
+
+  def platform_short
+    platform_map = { 'x86_64' => 'x64',
+                     'ppc64le' => 'ppc64le'}
+    platform_map[@platform]
+  end
+
+  def supported?
+    true
+  end
+
+  def source_directory
+    platform_map = { 'x86_64' => 'x86_64',
+                     'ppc64le' => 'powerpc64le'}
+
+    "#{platform_map[@platform]}-#{@os}/"
   end
 
   private

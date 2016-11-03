@@ -2,7 +2,7 @@
 require 'spec_helper'
 require 'fileutils'
 
-describe 'building a binary', :integration do
+describe 'building a binary', :integration, :exclude_on_ppc64le do
   context 'when dotnet is specified' do
     before(:all) do
       run_binary_builder('dotnet', 'v1.0.0-preview2.0.1', '--git-commit-sha=635cf40e58ede8a53e8b9555e19a6e1ccd6f9fbe')

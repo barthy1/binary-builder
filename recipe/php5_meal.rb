@@ -101,11 +101,12 @@ class Php5Recipe < BaseRecipe
       cp -a /usr/lib/libmcrypt.so* #{path}/lib
       cp -a /usr/lib/libaspell.so* #{path}/lib
       cp -a /usr/lib/libpspell.so* #{path}/lib
-      cp -a /usr/lib/#{file_path}/libgearman.so* #{path}/lib
-      cp -a /usr/lib/#{file_path}/libcassandra.so* #{path}/lib
-      cp -a /usr/lib/#{file_path}/libuv.so* #{path}/lib
-      cp -a /usr/local/lib/#{file_path}/librabbitmq.so* #{path}/lib/
-      cp -a /usr/lib/#{file_path}/libsybdb.so* #{path}/lib/
+      cp -a /usr/lib/librdkafka.so* #{path}/lib
+      cp -a /usr/lib/#{source_directory}/libgearman.so* #{path}/lib
+      cp -a /usr/lib/#{source_directory}/libcassandra.so* #{path}/lib
+      cp -a /usr/lib/#{source_directory}/libuv.so* #{path}/lib
+      cp -a /usr/local/lib/#{source_directory}/librabbitmq.so* #{path}/lib/
+      cp -a /usr/lib/#{source_directory}/libsybdb.so* #{path}/lib/
 
       # Remove unused files
       rm "#{path}/etc/php-fpm.conf.default"
@@ -121,16 +122,24 @@ end
 class Php5Meal
   attr_reader :name, :version
 
-  def initialize(name, version, options)
+  def initialize(name, version, platform, os, options)
     @name    = name
     @version = version
+    @platform = platform
+    @os = os
     @options = options
   end
 
-    def file_path
-      arch = RbConfig::CONFIG['host_cpu']
-      arch == 'powerpc64le' ? "powerpc64le-linux-gnu" : "x86_64-linux-gnu"
-    end
+  def source_directory
+    platform_map = {'x86_64' => 'x86_64',
+                    'ppc64le' => 'powerpc64le'}
+
+    "#{platform_map[@platform]}-#{@os}/"
+  end
+
+  def supported?
+    !@platform=="ppc64le"
+  end
 
   def cook
     system <<-eof
@@ -159,17 +168,16 @@ class Php5Meal
         libsybdb5 \
         libxml2-dev \
         libzip-dev \
-        libdb-dev \
-
+        libzookeeper-mt-dev \
         snmp-mibs-downloader
 
-      sudo ln -fs /usr/include/#{file_path}/gmp.h /usr/include/gmp.h
-      sudo ln -fs /usr/lib/#{file_path}/libldap.so /usr/lib/libldap.so
-      sudo ln -fs /usr/lib/#{file_path}/libldap_r.so /usr/lib/libldap_r.so
-      sudo ln -fs /usr/lib/#{file_path}/libsybdb.so /usr/lib/libsybdb.so
+      sudo ln -fs /usr/include/#{source_directory}/gmp.h /usr/include/gmp.h
+      sudo ln -fs /usr/lib/#{source_directory}/libldap.so /usr/lib/libldap.so
+      sudo ln -fs /usr/lib/#{source_directory}/libldap_r.so /usr/lib/libldap_r.so
+      sudo ln -fs /usr/lib/#{source_directory}/libsybdb.so /usr/lib/libsybdb.so
     eof
 
-    install_cassandra_dependencies || true
+    install_cassandra_dependencies
 
     ioncube_recipe.cook
 
@@ -251,6 +259,7 @@ class Php5Meal
       lua_recipe.send(:files_hashs) +
       luapecl_recipe.send(:files_hashs) +
       hiredis_recipe.send(:files_hashs) +
+      librdkafka_recipe.send(:files_hashs) +
       phpiredis_recipe.send(:files_hashs) +
       phpprotobufpecl_recipe.send(:files_hashs) +
       phalcon_recipe.send(:files_hashs) +
@@ -267,26 +276,26 @@ class Php5Meal
 
   def standard_pecl(name, version, md5)
     @pecl_recipes ||= []
-    recipe = PeclRecipe.new(name, version, md5: md5,
+    recipe = PeclRecipe.new(name, version, @platform, @os, md5: md5,
                                            php_path: php_recipe.path)
     recipe.cook
     @pecl_recipes << recipe
   end
 
   def snmp_recipe
-    SnmpRecipe.new(php_recipe.path)
+    SnmpRecipe.new(php_recipe.path, @platform, @os)
   end
 
   def libmemcached_recipe
-    @libmemcached_recipe ||= LibmemcachedRecipe.new('libmemcached', '1.0.18')
+    @libmemcached_recipe ||= LibmemcachedRecipe.new('libmemcached', '1.0.18', @platform, @os)
   end
 
   def memcachedpecl_recipe
-    @memcachedpecl_recipe ||= MemcachedPeclRecipe.new('memcached', '2.2.0', php_path: php_recipe.path, libmemcached_path: libmemcached_recipe.path)
+    @memcachedpecl_recipe ||= MemcachedPeclRecipe.new('memcached', '2.2.0', @platform, @os, php_path: php_recipe.path, libmemcached_path: libmemcached_recipe.path)
   end
 
   def php_recipe
-    @php_recipe ||= Php5Recipe.new(@name, @version, {
+    @php_recipe ||= Php5Recipe.new(@name, @version, @platform, @os, {
       rabbitmq_path: File.join(rabbitmq_recipe.path, "rabbitmq-c-#{rabbitmq_recipe.version}", 'librabbitmq'),
       hiredis_path: hiredis_recipe.path,
       libmemcached_path: libmemcached_recipe.path,
@@ -295,55 +304,55 @@ class Php5Meal
   end
 
   def luapecl_recipe
-    @luapecl_recipe ||= LuaPeclRecipe.new('lua', '1.1.0', md5: '58bd532957473f2ac87f1032c4aa12b5',
+    @luapecl_recipe ||= LuaPeclRecipe.new('lua', '1.1.0', @platform, @os, md5: '58bd532957473f2ac87f1032c4aa12b5',
                                                           php_path: php_recipe.path,
                                                           lua_path: lua_recipe.path)
   end
 
 
   def phpprotobufpecl_recipe
-    @phpprotobufpecl_recipe ||= PHPProtobufPeclRecipe.new('phpprotobuf', '0.11.1', md5: 'adbf5214bfd44ce18962dd49f5640552',
+    @phpprotobufpecl_recipe ||= PHPProtobufPeclRecipe.new('phpprotobuf', '0.11.1', @platform, @os, md5: 'adbf5214bfd44ce18962dd49f5640552',
                                                                                        php_path: php_recipe.path)
   end
 
   def ioncube_recipe
-    @ioncube ||= IonCubeRecipe.new('ioncube', '6.0.6', md5: '7d2b42033a0570e99080beb6a7db1478')
+    @ioncube ||= IonCubeRecipe.new('ioncube', '6.0.6', @platform, @os, md5: '7d2b42033a0570e99080beb6a7db1478')
   end
 
   def phalcon_recipe
-    @phalcon_recipe ||= PhalconRecipe.new('phalcon', '3.0.1', md5: '4a67015af27eb4fbb4e32c23d2610815',
+    @phalcon_recipe ||= PhalconRecipe.new('phalcon', '3.0.1', @platform, @os, md5: '4a67015af27eb4fbb4e32c23d2610815',
                                                               php_path: php_recipe.path)
     @phalcon_recipe.set_php_version('php5')
     @phalcon_recipe
   end
 
   def suhosinpecl_recipe
-    @suhosinpecl_recipe ||= SuhosinPeclRecipe.new('suhosin', '0.9.38', md5: '0c26402752b0aff69e4b891f062a52bf',
+    @suhosinpecl_recipe ||= SuhosinPeclRecipe.new('suhosin', '0.9.38', @platform, @os, md5: '0c26402752b0aff69e4b891f062a52bf',
                                                                          php_path: php_recipe.path)
   end
 
   def twigpecl_recipe
-    @twigpecl_recipe ||= TwigPeclRecipe.new('twig', '1.27.0', md5: '9f1f740e3fd0570b16a8b150fb0380de',
+    @twigpecl_recipe ||= TwigPeclRecipe.new('twig', '1.27.0', @platform, @os, md5: '9f1f740e3fd0570b16a8b150fb0380de',
                                                               php_path: php_recipe.path)
   end
 
   def xcachepecl_recipe
-    @xcachepecl_recipe ||= XcachePeclRecipe.new('xcache', '3.2.0', md5: '8b0a6f27de630c4714ca261480f34cda',
+    @xcachepecl_recipe ||= XcachePeclRecipe.new('xcache', '3.2.0', @platform, @os, md5: '8b0a6f27de630c4714ca261480f34cda',
                                                                    php_path: php_recipe.path)
   end
 
   def xhprofpecl_recipe
-    @xhprofpecl_recipe ||= XhprofPeclRecipe.new('xhprof', '0bbf2a2ac3', md5: '1df4aebf1cb24e7cf369b3af357106fc',
+    @xhprofpecl_recipe ||= XhprofPeclRecipe.new('xhprof', '0bbf2a2ac3', @platform, @os, md5: '1df4aebf1cb24e7cf369b3af357106fc',
                                                                         php_path: php_recipe.path)
   end
 
   def oracle_recipe
-    @oracle_recipe ||= OraclePeclRecipe.new('oci8', '2.0.11', md5: 'b953aec8600b1990fc1956bd5f580b0b',
+    @oracle_recipe ||= OraclePeclRecipe.new('oci8', '2.0.11', @platform, @os, md5: 'b953aec8600b1990fc1956bd5f580b0b',
                                                               php_path: php_recipe.path)
   end
 
   def oracle_pdo_recipe
-    @oracle_pdo_recipe ||= OraclePdoRecipe.new('pdo_oci', version,
+    @oracle_pdo_recipe ||= OraclePdoRecipe.new('pdo_oci', version, @platform, @os,
                                                php_source: "#{php_recipe.send(:tmp_path)}/php-#{version}",
                                                php_path: php_recipe.path)
   end

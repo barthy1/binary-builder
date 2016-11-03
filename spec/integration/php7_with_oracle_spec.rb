@@ -2,11 +2,11 @@
 require 'spec_helper'
 require 'fileutils'
 
-describe 'building a binary', :run_oracle_php_tests do
+describe 'building a binary', :run_oracle_php_tests, :exclude_on_ppc64le do
   context 'when php7 is specified with oracle libraries' do
     before(:all) do
       run_binary_builder('php7', '7.0.3', '--md5=235b1217a9ec7bee6e0bd517e3636d45')
-      @binary_tarball_location = Dir.glob(File.join(Dir.pwd, 'php7-7.0.3-linux-x64-*.tgz')).first
+      @binary_tarball_location = Dir.glob(File.join(Dir.pwd, "php7-7.0.3-linux-#{platform_short}-*.tgz")).first
     end
 
     after(:all) do

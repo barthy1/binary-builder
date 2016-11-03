@@ -41,7 +41,7 @@ class GodepMeal < BaseRecipe
   end
 
   def go_recipe
-    @go_recipe ||= GoRecipe.new(@name, @version)
+    @go_recipe ||= GoRecipe.new(@name, @version, @platform, @os)
   end
 
   def tmp_path

@@ -6,8 +6,7 @@ describe 'building a binary', :integration do
   context 'when httpd is specified' do
     before(:all) do
       run_binary_builder('httpd', '2.4.17', '--md5=cf4dfee11132cde836022f196611a8b7')
-      platform = (ENV['BINARY_BUILDER_PLATFORM'] == 'x86_64') ? "x64" : ENV['BINARY_BUILDER_PLATFORM']
-      @binary_tarball_location = Dir.glob(File.join(Dir.pwd, "httpd-2.4.17-linux-#{platform}*.tgz")).first
+      @binary_tarball_location = Dir.glob(File.join(Dir.pwd, "httpd-2.4.17-linux-#{platform_short}*.tgz")).first
     end
 
     after(:all) do

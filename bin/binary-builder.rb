@@ -33,6 +33,21 @@ optparser = OptionParser.new do |opts|
   opts.on('-vVERSION', '--version=VERSION', 'Version of the binary e.g. 1.7.11') do |n|
     options[:version] = n
   end
+  opts.on('-pPLATFORM', '--platform=PLATFORM', 'Platfrom for the binary e.g. x86_64') do |n|
+    puts "n = #{n}"
+    if n.nil?
+      platform = RbConfig::CONFIG['host_cpu']
+      platform = "ppc64le" if platform == 'powerpc64le'
+      options[:platform] = platform
+    else
+      options[:platform] = n
+    end
+  end
+  opts.on('-oOS', '--os=OS', 'Operating system for the binary e.g. GNU/Linux') do |n|
+    os_name_map = {'GNU/Linux' => 'linux-gnu'}
+    puts "os n = #{n}"
+    options[:os] = n.nil? ? 'linux-gnu': os_name_map[n]
+  end
   opts.on('--sha256=SHA256', 'SHA256 of the binary ') do |n|
     options[:sha256] = n
   end
@@ -53,7 +68,6 @@ optparser = OptionParser.new do |opts|
   end
 end
 optparser.parse!
-
 unless options[:name] && options[:version] && (
     options[:sha256] ||
     options[:md5] ||
@@ -62,20 +76,26 @@ unless options[:name] && options[:version] && (
 )
   raise optparser.help
 end
-
+puts "options = #{options.inspect}"
 raise "Unsupported recipe [#{options[:name]}], supported options are [#{recipes.keys.join(", ")}]" unless recipes.has_key?(options[:name])
 
 recipe = recipes[options[:name]].new(
   options[:name],
   options[:version],
+  options[:platform],
+  options[:os],
   DetermineChecksum.new(options).to_h
 )
-Bundler.with_clean_env do
-  puts "Source URL: #{recipe.url}"
+if recipe.supported?
+  Bundler.with_clean_env do
+    puts "Source URL: #{recipe.url}"
 
-  recipe.cook
-  ArchiveRecipe.new(recipe).tar!
+    recipe.cook
+    ArchiveRecipe.new(recipe).tar!
 
-  puts 'Source YAML:'
-  puts YAMLPresenter.new(recipe).to_yaml
+    puts 'Source YAML:'
+    puts YAMLPresenter.new(recipe).to_yaml
+  end
+else
+  puts "recipe [#{options[:name]}] is unsupported for #{options[:platform]}, #{options[:os]}"
 end

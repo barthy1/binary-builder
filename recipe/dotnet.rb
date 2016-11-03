@@ -19,7 +19,7 @@ class DotNetRecipe < BaseRecipe
               sudo apt-get update
               sudo apt-get -y upgrade
               sudo apt-get -y install \
-                clang \
+                clang-3.5 \
                 devscripts \
                 debhelper \
                 libunwind8 \
@@ -36,16 +36,25 @@ class DotNetRecipe < BaseRecipe
   end
 
   def archive_files
-    ["#{tmp_path}/cli/artifacts/ubuntu.14.04-x64/stage2/*"]
+    ["#{tmp_path}/cli/artifacts/ubuntu.14.04-#{platform_short}/stage2/*"]
+  end
+
+
+  def supported?
+    !ppc64le?
   end
 
   def archive_filename
-    dotnet_version = `#{tmp_path}/cli/artifacts/ubuntu.14.04-x64/stage2/dotnet --version`.strip
-    "#{name}.#{dotnet_version}.linux-amd64.tar.gz"
+    dotnet_version = `#{tmp_path}/cli/artifacts/ubuntu.14.04-#{platform_short}/stage2/dotnet --version`.strip
+    "#{name}.#{dotnet_version}.linux-#{platform_name}.tar.gz"
   end
 
   def url
     "https://github.com/dotnet/cli"
   end
 
+  private
+  def platform_name
+    ppc64le? ? "ppc64le" : "amd64"
+  end
 end

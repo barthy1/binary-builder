@@ -15,8 +15,7 @@ zAZ014ADQ5yfH+Ma40K997AxZeCVGU+A5IEHGoZ2i8pyqx0Jhh6cbpC18yHu5ciN
 aySUQcOvO67Z14d9E9ziX/E24KWl6xRymmy9VhzawgSmf//3yZVaD6C/8om3qMw=
 =zjw3
 -----END PGP SIGNATURE-----"')
-      @platform = (ENV['BINARY_BUILDER_PLATFORM'] == 'x86_64') ? "x64" : ENV['BINARY_BUILDER_PLATFORM']
-      @binary_tarball_location = File.join(Dir.pwd, "nginx-1.9.4-linux-#{@platform}.tgz")
+      @binary_tarball_location = File.join(Dir.pwd, "nginx-1.9.4-linux-#{platform_short}.tgz")
     end
 
     after(:all) do
@@ -26,7 +25,7 @@ aySUQcOvO67Z14d9E9ziX/E24KWl6xRymmy9VhzawgSmf//3yZVaD6C/8om3qMw=
     it 'builds the specified binary, tars it, and places it in your current working directory' do
       expect(File).to exist(@binary_tarball_location)
 
-      httpd_version_cmd = "./spec/assets/binary-exerciser.sh nginx-1.9.4-linux-#{@platform}.tgz ./nginx/sbin/nginx -v"
+      httpd_version_cmd = "./spec/assets/binary-exerciser.sh nginx-1.9.4-linux-#{platform_short}.tgz ./nginx/sbin/nginx -v"
       output, status = run(httpd_version_cmd)
 
       expect(status).to be_success

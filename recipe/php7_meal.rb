@@ -60,9 +60,11 @@ class Php7Recipe < BaseRecipe
     ["#{port_path}/*"]
   end
 
-  def file_path
-    arch = RbConfig::CONFIG['host_cpu']
-    arch == 'powerpc64le' ? "powerpc64le-linux-gnu" : "x86_64-linux-gnu"
+  def source_directory
+    platform_map = {'x86_64' => 'x86_64',
+                    'ppc64le' => 'powerpc64le'}
+
+    "#{platform_map[@platform]}-linux-gnu/"
   end
 
   def archive_path_name
@@ -89,22 +91,22 @@ class Php7Recipe < BaseRecipe
   end
 
   def archive_filename
-    platform = ppc64le? ? "ppc64le" : "x64"
-    "php7-#{version}-linux-#{platform}-#{Time.now.utc.to_i}.tgz"
+    "php7-#{version}-linux-#{platform_short}-#{Time.now.utc.to_i}.tgz"
   end
 
   def setup_tar
     system <<-eof
-      cp -a /usr/local/lib/#{file_path}/librabbitmq.so* #{path}/lib/
+      cp -a /usr/local/lib/#{source_directory}/librabbitmq.so* #{path}/lib/
       cp -a #{@hiredis_path}/lib/libhiredis.so* #{path}/lib/
+      cp #{@ioncube_path}/ioncube/ioncube_loader_lin_#{major_version}.so #{zts_path}/ioncube.so
       cp -a /usr/lib/libc-client.so* #{path}/lib/
       cp -a /usr/lib/libmcrypt.so* #{path}/lib
       cp -a /usr/lib/libaspell.so* #{path}/lib
       cp -a /usr/lib/libpspell.so* #{path}/lib
       cp -a /usr/lib/librdkafka.so* #{path}/lib
-      cp -a /usr/lib/#{file_path}/libmemcached.so* #{path}/lib
-      cp -a /usr/lib/#{file_path}/libcassandra.so* #{path}/lib
-      cp -a /usr/lib/#{file_path}/libuv.so* #{path}/lib
+      cp -a /usr/lib/#{source_directory}/libmemcached.so* #{path}/lib
+      cp -a /usr/lib/#{source_directory}/libcassandra.so* #{path}/lib
+      cp -a /usr/lib/#{source_directory}/libuv.so* #{path}/lib
       cp -a /usr/lib/libuv.so* #{path}/lib
 
       # Remove unused files
@@ -121,15 +123,23 @@ end
 class Php7Meal
   attr_reader :name, :version
 
-  def initialize(name, version, options)
+  def initialize(name, version, platform, os, options)
     @name    = name
     @version = version
+    @platform = platform
+    @os = os
     @options = options
   end
 
-  def file_path
-    arch = RbConfig::CONFIG['host_cpu']
-    arch == 'powerpc64le' ? "powerpc64le-linux-gnu" : "x86_64-linux-gnu"
+  def source_directory
+    platform_map = { 'x86_64' =>  'x86_64',
+                     'ppc64le' => 'powerpc64le'}
+
+    "#{platform_map[@platform]}-#{@os}/"
+  end
+
+  def supported?
+    !@platform=="ppc64le"
   end
 
   def cook
@@ -156,14 +166,16 @@ class Php7Meal
         libssl-dev \
         libxml2-dev \
         libzip-dev \
-        libdb-dev \
+        libzookeeper-mt-dev \
         snmp-mibs-downloader
-      sudo ln -fs /usr/include/#{file_path}/gmp.h /usr/include/gmp.h
-      sudo ln -fs /usr/lib/#{file_path}/libldap.so /usr/lib/libldap.so
-      sudo ln -fs /usr/lib/#{file_path}/libldap_r.so /usr/lib/libldap_r.so
+      sudo ln -fs /usr/include/#{source_directory}/gmp.h /usr/include/gmp.h
+      sudo ln -fs /usr/lib/#{source_directory}/libldap.so /usr/lib/libldap.so
+      sudo ln -fs /usr/lib/#{source_directory}/libldap_r.so /usr/lib/libldap_r.so
     eof
 
-    install_cassandra_dependencies || true
+    install_cassandra_dependencies
+
+    ioncube_recipe.cook
 
     php_recipe.cook
     php_recipe.activate
@@ -178,7 +190,7 @@ class Php7Meal
 
     # php extensions
     standard_pecl('apcu', '5.1.7', '7803b58fab6ecfe847ef5b9be6825dea')
-    standard_pecl('cassandra', '1.2.1', 'dca2cda61a1ff6a6cecb94f88a75c757')
+    standard_pecl('cassandra', '1.2.2', '2226a4d66f8e0a4de85656f10472afc5')
     standard_pecl('imagick', '3.4.2', '3f80e35c2434636cdb5df01b221b3ffa')
     standard_pecl('mailparse', '3.0.1', '5ae0643a11159414c7e790c73a9e25ec')
     standard_pecl('mongodb', '1.1.9', '0644ad0451e5913cbac22e3456ba239b')
@@ -242,41 +254,46 @@ class Php7Meal
 
   def standard_pecl(name, version, md5)
     @pecl_recipes ||= []
-    recipe = PeclRecipe.new(name, version, md5: md5,
+    recipe = PeclRecipe.new(name, version, @platform, @os, md5: md5,
                                            php_path: php_recipe.path)
     recipe.cook
     @pecl_recipes << recipe
   end
 
   def snmp_recipe
-    SnmpRecipe.new(php_recipe.path)
+    SnmpRecipe.new(php_recipe.path, @platform, @os)
   end
 
   def php_recipe
-    @php_recipe ||= Php7Recipe.new(@name, @version, {
-      hiredis_path: hiredis_recipe.path
+    @php_recipe ||= Php7Recipe.new(@name, @version, @platform, @os, {
+      hiredis_path: hiredis_recipe.path,
+      ioncube_path: ioncube_recipe.path
     }.merge(DetermineChecksum.new(@options).to_h))
   end
 
+  def ioncube_recipe
+    @ioncube ||= IonCubeRecipe.new('ioncube', '6.0.6', @platform, @os, md5: '7d2b42033a0570e99080beb6a7db1478')
+  end
+
   def luapecl_recipe
-    @luapecl_recipe ||= LuaPeclRecipe.new('lua', '2.0.2', md5: 'beb0c9b1c6ed2457d614607c8a1537af',
+    @luapecl_recipe ||= LuaPeclRecipe.new('lua', '2.0.2', @platform, @os, md5: 'beb0c9b1c6ed2457d614607c8a1537af',
                                                           php_path: php_recipe.path,
                                                           lua_path: lua_recipe.path)
   end
 
   def oracle_recipe
-    @oracle_recipe ||= OraclePeclRecipe.new('oci8', '2.1.1', md5: '01bb3429ce3206dcc3d3198e65dadfbc',
+    @oracle_recipe ||= OraclePeclRecipe.new('oci8', '2.1.1', @platform, @os, md5: '01bb3429ce3206dcc3d3198e65dadfbc',
 							     php_path: php_recipe.path)
   end
 
   def oracle_pdo_recipe
-    @oracle_pdo_recipe ||= OraclePdoRecipe.new('pdo_oci', version,
+    @oracle_pdo_recipe ||= OraclePdoRecipe.new('pdo_oci', version, @platform, @os,
                                                php_source: "#{php_recipe.send(:tmp_path)}/php-#{version}",
                                                php_path: php_recipe.path)
   end
 
   def phalcon_recipe
-    @phalcon_recipe ||= PhalconRecipe.new('phalcon', '3.0.1', md5: '4a67015af27eb4fbb4e32c23d2610815',
+    @phalcon_recipe ||= PhalconRecipe.new('phalcon', '3.0.1', @platform, @os, md5: '4a67015af27eb4fbb4e32c23d2610815',
                                                               php_path: php_recipe.path)
     @phalcon_recipe.set_php_version('php7')
     @phalcon_recipe

@@ -7,7 +7,6 @@ class GlideRecipe < BaseRecipe
   def cook
     download unless downloaded?
     extract
-
     # Installs go 1.6.2 binary to /usr/local/go/bin
     Dir.chdir("/usr/local") do
       go_download = ppc64le? ? "http://ftp.unicamp.br/pub/ppc64el/ubuntu/14_04/cloud-foundry/go-1.6.2-ppc64le.tar.gz" : "https://storage.googleapis.com/golang/go1.4.3.linux-amd64.tar.gz"
@@ -43,7 +42,7 @@ class GlideRecipe < BaseRecipe
   end
 
   def go_recipe
-    @go_recipe ||= GoRecipe.new(@name, @version)
+    @go_recipe ||= GoRecipe.new(@name, @version, @platfrom, @os)
   end
 
   def tmp_path

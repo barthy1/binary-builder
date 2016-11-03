@@ -26,16 +26,16 @@ class NodeRecipe < BaseRecipe
     )
   end
 
-  def cook
-    puts "before download"
-    download unless downloaded?
-    puts "before extract"
-    extract
-    puts "before configure"
-    configure
-    puts "before install"
-    install
-  end
+  # def cook
+  #   puts "before download"
+  #   download unless downloaded?
+  #   puts "before extract"
+  #   extract
+  #   puts "before configure"
+  #   configure
+  #   puts "before install"
+  #   install
+  # end
 
   def url
     extension = version =~ /^(0.10)|(0.12)/ ? '-port' : ''
@@ -43,8 +43,7 @@ class NodeRecipe < BaseRecipe
   end
 
   def dest_dir
-    platform = ppc64le? ? "ppc64le" : "x64"
-    "/tmp/node-v#{version}-linux-#{platform}"
+    "/tmp/node-v#{version}-linux-#{platform_short}"
   end
 
   def configure

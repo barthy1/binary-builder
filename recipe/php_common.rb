@@ -24,7 +24,7 @@ end
 
 class LibRdKafkaRecipe < BaseRecipe
   def url
-    "https://github.com/edenhill/librdkafka/archive/#{version}.tar.gz"
+    "https://github.com/edenhill/librdkafka/archive/v#{version}.tar.gz"
   end
 
   def work_path
@@ -52,10 +52,10 @@ class PeclRecipe < BaseRecipe
   end
 
   def configure_options
-    [
-      "--with-php-config=#{@php_path}/bin/php-config",
-      "--build=powerpc64le-linux-gnu"
+    options = [
+      "--with-php-config=#{@php_path}/bin/php-config"
     ]
+    ppc64le? ? options.push('--build=powerpc64le-linux-gnu') : options
   end
 
   def configure
@@ -297,14 +297,19 @@ class XhprofPeclRecipe < PeclRecipe
 end
 
 class SnmpRecipe
-  def initialize(php_path)
+  def initialize(php_path, platform = 'x86_64', os = 'linux-gnu')
     @php_path = php_path
+    @platfrom = platform
+    @os = os
   end
 
-  def file_path
-    arch = RbConfig::CONFIG['host_cpu']
-    arch == 'powerpc64le' ? "powerpc64le-linux-gnu" : "x86_64-linux-gnu"
+  def source_directory
+    platform_map = {'x86_64' => 'x86_64',
+                    'ppc64le' => 'powerpc64le'}
+
+    "#{platform_map[@platform]}-#{@os}/"
   end
+
 
   def cook
     system <<-eof
@@ -338,80 +343,35 @@ end
 # PHP 5 and PHP 7 Common recipes
 
 def hiredis_recipe
-  HiredisRecipe.new('hiredis', '0.13.3', md5: '43dca1445ec6d3b702821dba36000279')
+  HiredisRecipe.new('hiredis', '0.13.3', @platform, @os, md5: '43dca1445ec6d3b702821dba36000279')
 end
 
 def phpiredis_recipe
-  PHPIRedisRecipe.new('phpiredis', 'a64e3bfe7', md5: '84c68887c3b9744106f4ccb2969f3a2a',
+  PHPIRedisRecipe.new('phpiredis', 'a64e3bfe7', @platform, @os, md5: '84c68887c3b9744106f4ccb2969f3a2a',
                                                 php_path: php_recipe.path,
                                                 hiredis_path: hiredis_recipe.path)
 end
 
-
 def amqppecl_recipe
-  AmqpPeclRecipe.new('amqp', '1.7.1', md5: '901befb3ba9c906e88ae810f83599baf',
+  AmqpPeclRecipe.new('amqp', '1.7.1', @platform, @os, md5: '901befb3ba9c906e88ae810f83599baf',
                                       php_path: php_recipe.path,
                                       rabbitmq_path: rabbitmq_recipe.work_path)
 end
 
 def lua_recipe
-  LuaRecipe.new('lua', '5.3.3', md5: '703f75caa4fdf4a911c1a72e67a27498')
+  LuaRecipe.new('lua', '5.3.3', @platform, @os, md5: '703f75caa4fdf4a911c1a72e67a27498')
 end
 
 def rabbitmq_recipe
-  RabbitMQRecipe.new('rabbitmq', '0.8.0', md5: '51d5827651328236ecb7c60517c701c2')
+  RabbitMQRecipe.new('rabbitmq', '0.8.0', @platform, @os, md5: '51d5827651328236ecb7c60517c701c2')
 end
 
 def librdkafka_recipe
-  LibRdKafkaRecipe.new('librdkafka', '0.9.1', md5: 'feb25faed02815f60ff363b2f40ba1b9')
+  LibRdKafkaRecipe.new('librdkafka', '0.9.2', @platform , @os, md5: 'f2cc5ca6a149928c3cb34398379a5024')
 end
 
 def install_cassandra_dependencies
   cassandra_version = "2.5.0"
- # http://ports.ubuntu.com/ubuntu-ports/pool/universe/libu/libuv1/libuv1-dbg_1.8.0-1_ppc64el.deb
-  arch = RbConfig::CONFIG['host_cpu']
-  if arch == 'powerpc64le'
-    system <<-eof
-sudo apt-get update
-sudo apt-get -y upgrade
-sudo apt-get -y install \
-  automake \
-  g++ \
-  make \
-  cmake \
-  libssl-dev \
-  libtool \
-  python-dev \
-  clang-3.6 \
-  libboost-all-dev
-mkdir /tmp/cassandra
-cd /tmp/cassandra
-wget https://s3.amazonaws.com/buildpacks-store/libuv_1.8.0-1_ppc64el.deb
-wget https://s3.amazonaws.com/buildpacks-store/libuv-dev_1.8.0-1_ppc64el.deb
-dpkg -i libuv_1.8.0-1_ppc64el.deb
-dpkg -i libuv-dev_1.8.0-1_ppc64el.deb
-git clone --recursive https://github.com/boostorg/boost
-cd boost
-# git submodule update --init libs/chrono
-# git submodule update --init libs/date_time
-# git submodule update --init libs/filesystem
-# git submodule update --init libs/log
-# git submodule update --init libs/log_setup
-# git submodule update --init libs/system
-# git submodule update --init libs/regex
-# git submodule update --init libs/thread
-# git submodule update --init libs/unit_test_framework
-./bootstrap.sh --prefix=/usr --libdir=/usr/local/lib --includedir=/usr/local/include
-./b2 install
-cd ..
-git clone --recursive https://github.com/datastax/cpp-driver
-mkdir cpp-driver/build
-cd cpp-driver/build
-cmake -DBOOST_ROOT=/tmp/cassandra/boost/ -DCMAKE_INSTALL_PREFIX:PATH=/usr -DBoost_DEBUG=ON ..
-make
-make install
-      eof
-     else
   system <<-eof
     wget http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies/libuv/v1.8.0/libuv_1.8.0-1_amd64.deb
     wget http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies/libuv/v1.8.0/libuv-dev_1.8.0-1_amd64.deb
@@ -423,5 +383,4 @@ make install
     dpkg -i cassandra-cpp-driver_#{cassandra_version}-1_amd64.deb
     dpkg -i cassandra-cpp-driver-dev_#{cassandra_version}-1_amd64.deb
   eof
-  end
 end

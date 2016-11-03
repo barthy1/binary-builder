@@ -7,9 +7,11 @@ require_relative 'openjdk7'
 class JRubyMeal
   attr_reader :name, :version
 
-  def initialize(name, version, options = {})
+  def initialize(name, version, platform = 'x86_64', os = 'linux-gnu', options = {})
     @name    = name
     @version = version
+    @platform = platform
+    @os = os
     @options = options
   end
 
@@ -45,6 +47,10 @@ class JRubyMeal
     jruby.archive_filename
   end
 
+  def supported?
+    true
+  end
+
   private
 
   def files_hashs
@@ -54,7 +60,7 @@ class JRubyMeal
   end
 
   def jruby
-    @jruby ||= JRubyRecipe.new(@name, @version, @options)
+    @jruby ||= JRubyRecipe.new(@name, @version, @platform, @os, @options)
   end
 
   def openjdk
@@ -62,10 +68,10 @@ class JRubyMeal
   end
 
   def maven
-    @maven ||= MavenRecipe.new('maven', '3.3.9', md5: '030ce5b3d369f01aca6249b694d4ce03')
+    @maven ||= MavenRecipe.new('maven', '3.3.9', @platform, @os, md5: '030ce5b3d369f01aca6249b694d4ce03')
   end
 
   def ant
-    @ant ||= AntRecipe.new('ant', '1.9.7', md5: 'a2fd9458c76700b7be51ef12f07d4bb1')
+    @ant ||= AntRecipe.new('ant', '1.9.7', @platform, @os, md5: 'a2fd9458c76700b7be51ef12f07d4bb1')
   end
 end

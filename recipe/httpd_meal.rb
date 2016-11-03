@@ -87,9 +87,11 @@ end
 class HTTPdMeal
   attr_reader :name, :version
 
-  def initialize(name, version, options = {})
+  def initialize(name, version, platform, os, options = {})
     @name    = name
     @version = version
+    @platform=platform
+    @os=os
     @options = options
   end
 
@@ -121,6 +123,10 @@ class HTTPdMeal
     httpd_recipe.setup_tar
   end
 
+  def supported?
+    true
+  end
+
   private
 
   def files_hashs
@@ -131,7 +137,7 @@ class HTTPdMeal
   end
 
   def httpd_recipe
-    @http_recipe ||= HTTPdRecipe.new(@name, @version, {
+    @http_recipe ||= HTTPdRecipe.new(@name, @version, @platform, @os, {
       apr_path: apr_recipe.path,
       apr_util_path: apr_util_recipe.path,
       apr_iconv_path: apr_iconv_recipe.path
@@ -139,17 +145,17 @@ class HTTPdMeal
   end
 
   def apr_util_recipe
-    @apr_util_recipe ||= AprUtilRecipe.new('apr-util', '1.5.4', apr_path: apr_recipe.path,
+    @apr_util_recipe ||= AprUtilRecipe.new('apr-util', '1.5.4', @platform, @os, apr_path: apr_recipe.path,
                                                                 apr_iconv_path: apr_iconv_recipe.path,
                                                                 md5: '866825c04da827c6e5f53daff5569f42')
   end
 
   def apr_iconv_recipe
-    @apr_iconv_recipe ||= AprIconvRecipe.new('apr-iconv', '1.2.1',                                                apr_path: apr_recipe.path,
+    @apr_iconv_recipe ||= AprIconvRecipe.new('apr-iconv', '1.2.1',  @platform, @os,                               apr_path: apr_recipe.path,
                                                                                                                   md5: '4a27a1480e6862543396e59c4ffcdeb4')
   end
 
   def apr_recipe
-    @apr_recipe ||= AprRecipe.new('apr', '1.5.2', md5: '98492e965963f852ab29f9e61b2ad700')
+    @apr_recipe ||= AprRecipe.new('apr', '1.5.2', @platform, @os, md5: '98492e965963f852ab29f9e61b2ad700')
   end
 end

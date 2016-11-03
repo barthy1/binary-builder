@@ -6,8 +6,7 @@ describe 'building a binary', :integration do
   context 'when python is specified' do
     before(:all) do
       run_binary_builder('python', '3.4.3', '--md5=4281ff86778db65892c05151d5de738d')
-      @platform = (ENV['BINARY_BUILDER_PLATFORM'] == 'x86_64') ? "x64" : ENV['BINARY_BUILDER_PLATFORM']
-      @binary_tarball_location = File.join(Dir.pwd, "python-3.4.3-linux-#{@platform}.tgz")
+      @binary_tarball_location = File.join(Dir.pwd, "python-3.4.3-linux-#{platform_short}.tgz")
     end
 
     after(:all) do
@@ -17,7 +16,7 @@ describe 'building a binary', :integration do
     it 'builds the specified binary, tars it, and places it in your current working directory' do
       expect(File).to exist(@binary_tarball_location)
 
-      python_version_cmd = "env LD_LIBRARY_PATH=/tmp/binary-exerciser/lib ./spec/assets/binary-exerciser.sh python-3.4.3-linux-#{@platform}.tgz ./bin/python -c 'import sys;print(sys.version[:5])'"
+      python_version_cmd = "env LD_LIBRARY_PATH=/tmp/binary-exerciser/lib ./spec/assets/binary-exerciser.sh python-3.4.3-linux-#{platform_short}.tgz ./bin/python -c 'import sys;print(sys.version[:5])'"
       output, status = run(python_version_cmd)
 
       expect(status).to be_success

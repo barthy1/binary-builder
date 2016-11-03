@@ -51,8 +51,11 @@ RSpec.configure do |config|
 
   def setup_oracle_libs(dir_to_contain_oracle)
     Dir.chdir(dir_to_contain_oracle) do
-      system 'aws s3 cp s3://buildpacks-oracle-client-libs/oracle_client_libs.tgz .'
-      system 'tar -xvf oracle_client_libs.tgz'
+      s3_bucket = ENV['ORACLE_LIBS_AWS_BUCKET']
+      libs_filename = ENV['ORACLE_LIBS_FILENAME']
+
+      system "aws s3 cp s3://#{s3_bucket}/#{libs_filename} ."
+      system "tar -xvf #{libs_filename}"
     end
   end
 
@@ -78,11 +81,26 @@ RSpec.configure do |config|
   end
 
   def run_binary_builder(binary_name, binary_version, flags)
-    binary_builder_cmd = "bundle exec ./bin/binary-builder --name=#{binary_name} --version=#{binary_version} #{flags}"
+    binary_builder_cmd = "bundle exec ./bin/binary-builder --name=#{binary_name} --version=#{binary_version} --platform=#{platform} --os=#{os} #{flags}"
     run(binary_builder_cmd)
   end
 
   def tar_contains_file(filename)
     system("tar --wildcards -tf #{@binary_tarball_location} #{filename} >/dev/null 2>&1")
+  end
+
+  def platform
+    puts "ENV['BINARY_BUILDER_PLATFORM'] #{ENV['BINARY_BUILDER_PLATFORM']}"
+    ENV['BINARY_BUILDER_PLATFORM'].nil? ? 'x86_64': ENV['BINARY_BUILDER_PLATFORM']
+  end
+
+  def os
+    puts "ENV['BINARY_BUILDER_OS_NAME'] #{ENV['BINARY_BUILDER_OS_NAME']}"
+    ENV['BINARY_BUILDER_OS_NAME'].nil? ? 'GNU/Linux': ENV['BINARY_BUILDER_OS_NAME']
+  end
+
+  def platform_short
+    return "x64" if platform == 'x86_64'
+    platform
   end
 end

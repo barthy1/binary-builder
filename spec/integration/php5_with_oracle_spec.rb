@@ -2,12 +2,11 @@
 require 'spec_helper'
 require 'fileutils'
 
-describe 'building a binary', :run_oracle_php_tests do
+describe 'building a binary', :run_oracle_php_tests, :exclude_on_ppc64le do
   context 'when php5 is specified with oracle libraries' do
     before(:all) do
       run_binary_builder('php', '5.6.14', '--md5=ae625e0cfcfdacea3e7a70a075e47155')
-      platform = (ENV['BINARY_BUILDER_PLATFORM'] == 'x86_64') ? "x64" : ENV['BINARY_BUILDER_PLATFORM']
-      @binary_tarball_location = Dir.glob(File.join(Dir.pwd, "php-5.6.14-linux-#{platform}-*.tgz")).first
+      @binary_tarball_location = Dir.glob(File.join(Dir.pwd, "php-5.6.14-linux-#{platform_short}-*.tgz")).first
     end
 
     after(:all) do
