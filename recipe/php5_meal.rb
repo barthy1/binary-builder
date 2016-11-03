@@ -185,6 +185,7 @@ class Php5Meal
     libmemcached_recipe.cook
 
     # php extensions
+    standard_pecl('apcu', '4.0.11', '13c0c0dd676e5a7905d54fa985d0ee62')
     standard_pecl('cassandra', '1.2.2', '2226a4d66f8e0a4de85656f10472afc5')
     standard_pecl('igbinary', '1.2.1', '04a2474ff5eb99c7d0007bf9f4e8a6ec')
     standard_pecl('imagick', '3.4.2', '3f80e35c2434636cdb5df01b221b3ffa')
@@ -192,7 +193,7 @@ class Php5Meal
     standard_pecl('mailparse', '2.1.6', '0f84e1da1d074a4915a9bcfe2319ce84')
     standard_pecl('memcache', '2.2.7', '171e3f51a9afe18b76348ddf1c952141')
     standard_pecl('mongo', '1.6.14', '19cd8bd94494f924ce8314f304fd83b6')
-    standard_pecl('mongodb', '1.1.8', '94f0f8d551f5ca440420aa3db0054dd8')
+    standard_pecl('mongodb', '1.1.9', '0644ad0451e5913cbac22e3456ba239b')
     standard_pecl('msgpack', '0.5.7', 'b87b5c5e0dab9f41c824201abfbf363d')
     standard_pecl('protocolbuffers', '0.2.6', 'a304ca632b0d7c5710d5590ac06248a9')
     standard_pecl('redis', '2.2.8', 'b6c998a6904cb89b06281e1cfb89bc4d')
@@ -299,15 +300,6 @@ class Php5Meal
                                                           lua_path: lua_recipe.path)
   end
 
-  def hiredis_recipe
-    @hiredis_recipe ||= HiredisRecipe.new('hiredis', '0.13.3', md5: '43dca1445ec6d3b702821dba36000279')
-  end
-
-  def phpiredis_recipe
-    @phpiredis_recipe ||= PHPIRedisRecipe.new('phpiredis', '704c08c7b', md5: '1ea635f3712aa1b80245eeed2d570a0e',
-                                                                        php_path: php_recipe.path,
-                                                                        hiredis_path: hiredis_recipe.path)
-  end
 
   def phpprotobufpecl_recipe
     @phpprotobufpecl_recipe ||= PHPProtobufPeclRecipe.new('phpprotobuf', '0.11.1', md5: 'adbf5214bfd44ce18962dd49f5640552',
@@ -315,7 +307,7 @@ class Php5Meal
   end
 
   def ioncube_recipe
-    @ioncube ||= IonCubeRecipe.new('ioncube', '5.1.2', md5: '7d2b42033a0570e99080beb6a7db1478')
+    @ioncube ||= IonCubeRecipe.new('ioncube', '6.0.6', md5: '7d2b42033a0570e99080beb6a7db1478')
   end
 
   def phalcon_recipe
@@ -331,7 +323,7 @@ class Php5Meal
   end
 
   def twigpecl_recipe
-    @twigpecl_recipe ||= TwigPeclRecipe.new('twig', '1.24.2', md5: 'e42bcbeb337ef7a22fa5caf179e60d5a',
+    @twigpecl_recipe ||= TwigPeclRecipe.new('twig', '1.27.0', md5: '9f1f740e3fd0570b16a8b150fb0380de',
                                                               php_path: php_recipe.path)
   end
 
