@@ -78,7 +78,7 @@ RSpec.configure do |config|
   end
 
   def run_binary_builder(binary_name, binary_version, flags)
-    binary_builder_cmd = "bundle exec ./bin/binary-builder --name=#{binary_name} --version=#{binary_version} #{flags}"
+      binary_builder_cmd = "bundle exec ./bin/binary-builder --name=#{binary_name} --version=#{binary_version} #{flags}"
     run(binary_builder_cmd)
   end
 

@@ -5,7 +5,7 @@ require 'fileutils'
 describe 'building a binary', :integration do
   context 'when php5 is specified' do
     before(:all) do
-      run_binary_builder('php', '5.6.26', '--md5=e019f790fd5bd431d2d4ba7c756f6f4c9bad9bc9')
+      run_binary_builder('php', '5.6.26', '--md5=6aa387761ee6afa1e3be7ee94a1e8c03')
       platform = (ENV['BINARY_BUILDER_PLATFORM'] == 'x86_64') ? "x64" : ENV['BINARY_BUILDER_PLATFORM']
       @binary_tarball_location = Dir.glob(File.join(Dir.pwd, "php-5.6.26-linux-#{platform}-*.tgz")).first
     end
